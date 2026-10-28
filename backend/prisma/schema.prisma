@@ -1,0 +1,96 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id            String    @id @default(cuid()) @db.VarChar(30)
+  email         String    @unique @db.VarChar(254)
+  passwordHash  String    @db.VarChar(255)
+  displayName   String    @db.VarChar(80)
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions          Session[]
+  verificationToken VerificationToken?
+  profile           UserProfile?
+
+  photos UserPhoto[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  tokenHash String   @unique @db.Char(64)
+  userId    String   @db.VarChar(30)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  tokenHash String   @unique @db.Char(64)
+  userId    String   @unique @db.VarChar(30)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("verification_tokens")
+}
+
+model UserProfile {
+  id                String    @id @default(cuid()) @db.VarChar(30)
+  userId            String    @unique @db.VarChar(30)
+
+  // Personal profile
+  bio               String?   @db.VarChar(500)
+  dateOfBirth       DateTime? @db.Date
+  gender            String?   @db.VarChar(40)
+  city              String?   @db.VarChar(100)
+  country           String?   @db.VarChar(100)
+
+  // Dating preferences
+  preferredGender   String?   @db.VarChar(40)
+  minPreferredAge   Int?
+  maxPreferredAge   Int?
+  relationshipGoal  String?   @db.VarChar(60)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model UserPhoto {
+  id          String   @id @default(cuid()) @db.VarChar(30)
+  userId      String   @db.VarChar(30)
+  storageKey  String   @unique @db.VarChar(500)
+  contentType String   @db.VarChar(100)
+  sizeBytes   Int
+  isPrimary   Boolean  @default(false)
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, position])
+  @@map("user_photos")
+}
