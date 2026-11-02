@@ -22,11 +22,13 @@ export class ApiError extends Error {
 
 export async function apiRequest<T extends ApiResponse>(
   endpoint: string,
-  options: RequestInit = {},
+  options: RequestInit = {}
 ): Promise<T> {
   const headers = new Headers(options.headers);
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
 
-  if (options.body && !headers.has("Content-Type")) {
+  if (options.body && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -40,7 +42,7 @@ export async function apiRequest<T extends ApiResponse>(
     });
   } catch {
     throw new Error(
-      "Unable to connect to the server. Please check that the backend is running.",
+      "Unable to connect to the server. Please check that the backend is running."
     );
   }
 
@@ -49,7 +51,7 @@ export async function apiRequest<T extends ApiResponse>(
   if (!response.ok) {
     throw new ApiError(
       data.message || data.error || "Something went wrong. Please try again.",
-      response.status,
+      response.status
     );
   }
 
