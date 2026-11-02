@@ -226,7 +226,14 @@ router.post(
         return;
       }
 
-      console.error("Registration failed.");
+      console.error("Registration failed:", {
+        name: error instanceof Error ? error.name : "UnknownError",
+        message: error instanceof Error ? error.message : String(error),
+        code:
+          typeof error === "object" && error !== null && "code" in error
+            ? error.code
+            : undefined,
+      });
 
       res.status(500).json({
         success: false,
