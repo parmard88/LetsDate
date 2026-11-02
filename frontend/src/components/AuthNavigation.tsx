@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 
@@ -48,7 +49,7 @@ export default function AuthNavigation() {
       }
     }
 
-    checkSession();
+    void checkSession();
 
     return () => {
       active = false;
@@ -83,13 +84,13 @@ export default function AuthNavigation() {
   if (!user) {
     return (
       <div className="nav-actions">
-        <a href="/login" className="login-link">
+        <Link href="/login" className="login-link">
           Log in
-        </a>
+        </Link>
 
-        <a href="/register" className="button button-small">
+        <Link href="/register" className="button button-small">
           Join LetsDate <span aria-hidden="true">↗</span>
-        </a>
+        </Link>
 
         {error && (
           <span className="auth-nav-error" role="alert">
@@ -102,7 +103,17 @@ export default function AuthNavigation() {
 
   return (
     <div className="nav-actions">
-      <span className="login-link">Welcome, {user.displayName}</span>
+      <Link href="/discovery" className="login-link">
+        Discover
+      </Link>
+
+      <Link href="/matches" className="login-link">
+        Matches
+      </Link>
+
+      <Link href="/profile" className="login-link">
+        My Profile
+      </Link>
 
       <button
         type="button"

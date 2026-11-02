@@ -1,0 +1,349 @@
+
+.page {
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse at 85% 10%, rgba(248, 230, 229, 0.55), transparent 32%),
+      var(--background);
+  }
+  
+  .container {
+    width: min(1120px, calc(100% - 48px));
+    margin: 0 auto;
+    padding: 64px 0 90px;
+  }
+  
+  .heading {
+    max-width: 700px;
+    margin: 0 auto 42px;
+    text-align: center;
+  }
+  
+  .kicker {
+    margin-bottom: 16px;
+    color: var(--primary-dark);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+  }
+  
+  .heading h1 {
+    margin: 0;
+    color: var(--foreground);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 500;
+    letter-spacing: -1.8px;
+  }
+  
+  .heading h1 span {
+    color: var(--primary);
+    font-style: italic;
+  }
+  
+  .heading p {
+    max-width: 540px;
+    margin: 16px auto 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  
+  .profileGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 26px;
+  }
+  
+  .profileCard {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 12px 34px rgba(74, 45, 39, 0.06);
+  }
+  
+  .photoWrap {
+    position: relative;
+    height: 360px;
+    overflow: hidden;
+    background: var(--cream);
+  }
+  
+  .photo {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .photoOverlay {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 42px 20px 18px;
+    color: white;
+    background: linear-gradient(transparent, rgba(28, 19, 17, 0.72));
+  }
+  
+  .photoName {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 25px;
+  }
+  
+  .photoLocation {
+    font-size: 12px;
+    opacity: 0.9;
+  }
+  
+  .profileInfo {
+    padding: 20px;
+  }
+  
+  .goal {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 20px;
+    background: var(--rose-light);
+    color: var(--primary-dark);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: capitalize;
+  }
+  
+  .profileInfo h2 {
+    margin: 13px 0 8px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 23px;
+    font-weight: 500;
+  }
+  
+  .bio,
+  .bioMuted {
+    min-height: 48px;
+    margin: 0;
+    color: #6f6561;
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+  
+  .bioMuted {
+    color: #9b918c;
+    font-style: italic;
+  }
+  
+  .cardActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  
+  .cardActions button {
+    min-height: 45px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: white;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 160ms ease;
+  }
+  
+  .cardActions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  
+  .passButton {
+    color: #6e625d;
+  }
+  
+  .passButton:hover:not(:disabled) {
+    border-color: #b9aaa3;
+    background: #faf7f5;
+  }
+  
+  .cardActions .likeButton {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: white;
+  }
+  
+  .cardActions .likeButton:hover:not(:disabled) {
+    border-color: var(--primary-dark);
+    background: var(--primary-dark);
+  }
+  
+  .loading,
+  .emptyState {
+    padding: 70px 24px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.8);
+    text-align: center;
+  }
+  
+  .loading {
+    color: var(--muted);
+  }
+  
+  .emptyState {
+    max-width: 620px;
+    margin: 0 auto;
+  }
+  
+  .emptyHeart {
+    color: var(--primary);
+    font-size: 44px;
+  }
+  
+  .emptyState h2 {
+    margin: 14px 0 10px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 30px;
+    font-weight: 500;
+  }
+  
+  .emptyState p {
+    margin: 0 auto 24px;
+    max-width: 430px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  
+  .secondaryLink {
+    color: var(--primary-dark);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  
+  .error {
+    margin: 0 auto 24px;
+    padding: 13px 16px;
+    border: 1px solid #e9b8b8;
+    border-radius: 8px;
+    background: #fff1f1;
+    color: #9d3030;
+    font-size: 13px;
+  }
+  
+  .matchNotice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 28px;
+    padding: 20px 22px;
+    border: 1px solid #edc6ca;
+    border-radius: 12px;
+    background: #fff2f2;
+  }
+  
+  .matchHeart {
+    margin-right: 10px;
+    color: var(--primary);
+  }
+  
+  .matchNotice strong {
+    color: var(--primary-dark);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 21px;
+  }
+  
+  .matchNotice p {
+    margin: 7px 0 0;
+    color: #725e5c;
+    font-size: 13px;
+  }
+  
+  .matchActions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .matchLink {
+    color: var(--primary-dark);
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  
+  .matchActions button {
+    border: 0;
+    background: transparent;
+    color: #806e69;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  
+  .loadMore {
+    display: flex;
+    justify-content: center;
+    margin-top: 38px;
+  }
+  
+  .loadMoreButton {
+    padding: 14px 24px;
+    border: 1px solid var(--primary);
+    border-radius: 8px;
+    background: white;
+    color: var(--primary-dark);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  
+  .loadMoreButton:hover:not(:disabled) {
+    background: var(--rose-light);
+  }
+  
+  .loadMoreButton:disabled {
+    cursor: wait;
+    opacity: 0.6;
+  }
+  
+  @media (max-width: 900px) {
+    .profileGrid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  
+    .photoWrap {
+      height: 340px;
+    }
+  }
+  
+  @media (max-width: 600px) {
+    .container {
+      width: min(100% - 32px, 440px);
+      padding-top: 42px;
+    }
+  
+    .profileGrid {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  
+    .photoWrap {
+      height: 390px;
+    }
+  
+    .matchNotice {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  
+    .matchActions {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+  

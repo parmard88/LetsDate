@@ -11,6 +11,7 @@ const preferredGenderOptions = [
   "male",
   "female",
   "non-binary",
+  "other",
   "everyone",
 ] as const;
 
@@ -38,31 +39,13 @@ const profilePatchSchema = z
 
     country: z.string().trim().min(1).max(100).nullable().optional(),
 
-    preferredGender: z
-      .enum(preferredGenderOptions)
-      .nullable()
-      .optional(),
+    preferredGender: z.enum(preferredGenderOptions).nullable().optional(),
 
-    minPreferredAge: z
-      .number()
-      .int()
-      .min(18)
-      .max(100)
-      .nullable()
-      .optional(),
+    minPreferredAge: z.number().int().min(18).max(100).nullable().optional(),
 
-    maxPreferredAge: z
-      .number()
-      .int()
-      .min(18)
-      .max(100)
-      .nullable()
-      .optional(),
+    maxPreferredAge: z.number().int().min(18).max(100).nullable().optional(),
 
-    relationshipGoal: z
-      .enum(relationshipGoalOptions)
-      .nullable()
-      .optional(),
+    relationshipGoal: z.enum(relationshipGoalOptions).nullable().optional(),
   })
   .strict()
   .refine((data) => Object.keys(data).length > 0, {
@@ -91,8 +74,7 @@ function calculateAge(dateOfBirth: Date): number {
 
   if (
     monthDifference < 0 ||
-    (monthDifference === 0 &&
-      today.getUTCDate() < dateOfBirth.getUTCDate())
+    (monthDifference === 0 && today.getUTCDate() < dateOfBirth.getUTCDate())
   ) {
     age -= 1;
   }
@@ -120,8 +102,7 @@ function calculateProfileCompletion(profile: {
     Boolean(profile.city?.trim()),
     Boolean(profile.country?.trim()),
     Boolean(profile.preferredGender),
-    profile.minPreferredAge !== null &&
-      profile.maxPreferredAge !== null,
+    profile.minPreferredAge !== null && profile.maxPreferredAge !== null,
     Boolean(profile.relationshipGoal),
   ];
 
@@ -154,7 +135,7 @@ function formatProfile(
     relationshipGoal: string | null;
     createdAt: Date;
     updatedAt: Date;
-  },
+  }
 ) {
   const profileData = {
     userId: user.id,

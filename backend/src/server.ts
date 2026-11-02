@@ -10,6 +10,8 @@ import { prisma } from "./config/database.js";
 import authRoutes from "./routes/authRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import photoRoutes from "./routes/photoRoutes.js";
+import discoveryRoutes from "./routes/discoveryRoutes.js";
+import matchingRoutes from "./routes/matchingRoutes.js";
 
 const environmentSchema = z.object({
   NODE_ENV: z
@@ -97,6 +99,8 @@ app.get("/api/health/db", async (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/profile/photos", photoRoutes);
+app.use("/api/discovery", discoveryRoutes);
+app.use("/api/matches", matchingRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({

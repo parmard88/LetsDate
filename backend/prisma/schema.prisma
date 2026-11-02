@@ -8,6 +8,11 @@ datasource db {
   provider = "mysql"
 }
 
+enum SwipeAction {
+  LIKE
+  PASS
+}
+
 model User {
   id            String    @id @default(cuid()) @db.VarChar(30)
   email         String    @unique @db.VarChar(254)
@@ -20,8 +25,17 @@ model User {
   sessions          Session[]
   verificationToken VerificationToken?
   profile           UserProfile?
+  photos            UserPhoto[]
 
-  photos UserPhoto[]
+  // Discovery and matching relations
+  swipesGiven       Swipe[] @relation("SwipeActor")
+  swipesReceived    Swipe[] @relation("SwipeTarget")
+
+  matchesAsUserOne  Match[] @relation("MatchUserOne")
+  matchesAsUserTwo  Match[] @relation("MatchUserTwo")
+
+  blocksCreated     Block[] @relation("Blocker")
+  blocksReceived    Block[] @relation("Blocked")
 
   @@map("users")
 }
@@ -54,24 +68,24 @@ model VerificationToken {
 }
 
 model UserProfile {
-  id                String    @id @default(cuid()) @db.VarChar(30)
-  userId            String    @unique @db.VarChar(30)
+  id               String    @id @default(cuid()) @db.VarChar(30)
+  userId           String    @unique @db.VarChar(30)
 
   // Personal profile
-  bio               String?   @db.VarChar(500)
-  dateOfBirth       DateTime? @db.Date
-  gender            String?   @db.VarChar(40)
-  city              String?   @db.VarChar(100)
-  country           String?   @db.VarChar(100)
+  bio              String?   @db.VarChar(500)
+  dateOfBirth      DateTime? @db.Date
+  gender           String?   @db.VarChar(40)
+  city             String?   @db.VarChar(100)
+  country          String?   @db.VarChar(100)
 
   // Dating preferences
-  preferredGender   String?   @db.VarChar(40)
-  minPreferredAge   Int?
-  maxPreferredAge   Int?
-  relationshipGoal  String?   @db.VarChar(60)
+  preferredGender  String?   @db.VarChar(40)
+  minPreferredAge  Int?
+  maxPreferredAge  Int?
+  relationshipGoal String?   @db.VarChar(60)
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -93,4 +107,50 @@ model UserPhoto {
 
   @@index([userId, position])
   @@map("user_photos")
+}
+
+model Swipe {
+  id           String      @id @default(cuid()) @db.VarChar(30)
+  swiperId     String      @db.VarChar(30)
+  targetUserId String      @db.VarChar(30)
+  action       SwipeAction
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  swiper     User @relation("SwipeActor", fields: [swiperId], references: [id], onDelete: Cascade)
+  targetUser User @relation("SwipeTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@unique([swiperId, targetUserId])
+  @@index([targetUserId, action])
+  @@index([swiperId, action])
+  @@map("swipes")
+}
+
+model Match {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  userOneId String   @db.VarChar(30)
+  userTwoId String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+
+  userOne User @relation("MatchUserOne", fields: [userOneId], references: [id], onDelete: Cascade)
+  userTwo User @relation("MatchUserTwo", fields: [userTwoId], references: [id], onDelete: Cascade)
+
+  @@unique([userOneId, userTwoId])
+  @@index([userOneId, createdAt])
+  @@index([userTwoId, createdAt])
+  @@map("matches")
+}
+
+model Block {
+  id            String   @id @default(cuid()) @db.VarChar(30)
+  blockerId     String   @db.VarChar(30)
+  blockedUserId String   @db.VarChar(30)
+  createdAt     DateTime @default(now())
+
+  blocker     User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedUser User @relation("Blocked", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedUserId])
+  @@index([blockedUserId])
+  @@map("blocks")
 }
