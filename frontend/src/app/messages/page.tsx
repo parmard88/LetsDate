@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -228,9 +227,15 @@ export default function MessagesPage() {
           <p>Your conversations with your matches.</p>
         </div>
 
-        <Link href="/matches" className={styles.backLink}>
-          View matches
-        </Link>
+        <div className={styles.headerActions}>
+          <Link href="/" className={styles.backLink}>
+            Home
+          </Link>
+
+          <Link href="/matches" className={styles.backLink}>
+            View matches
+          </Link>
+        </div>
       </div>
 
       {loading && <p className={styles.status}>Loading conversations...</p>}

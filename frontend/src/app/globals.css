@@ -1172,3 +1172,56 @@ a {
     width: 100%;
   }
 }
+
+
+/* Active navigation link */
+.nav-link-active {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+/* Messages link and unread count */
+.messages-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.nav-unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* Keep navigation usable on smaller screens */
+@media (max-width: 650px) {
+  .nav-container {
+    height: auto;
+    min-height: 70px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    gap: 12px;
+  }
+
+  .nav-actions {
+    max-width: 68%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px 12px;
+    font-size: 11px;
+  }
+
+  .nav-actions .button-small {
+    padding: 9px 10px;
+    font-size: 10px;
+  }
+}

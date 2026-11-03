@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError, apiRequest } from "@/lib/api";
+import Link from "next/link";
+import AuthNavigation from "@/components/AuthNavigation";
 
 type Completion = {
   percentage: number;
@@ -273,300 +275,335 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <main className="profile-page">
-        <div className="profile-loading">Loading your profile...</div>
-      </main>
+      <>
+        <header className="site-header">
+          <div className="nav-container">
+            <Link href="/" className="brand" aria-label="LetsDate home">
+              <span className="brand-mark">♡</span>
+              <span>
+                lets<span className="brand-accent">date</span>
+              </span>
+            </Link>
+
+            <AuthNavigation />
+          </div>
+        </header>
+
+        <main className="profile-page">
+          <div className="profile-loading">Loading your profile...</div>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="profile-page">
-      <div className="profile-container">
-        <header className="profile-heading">
-          <div>
-            <p className="profile-kicker">YOUR LETSDATE ACCOUNT</p>
-            <h1>Your profile</h1>
-            <p className="profile-subtitle">
-              Tell people a little about yourself and what you are looking for.
-            </p>
-          </div>
-          <button
-            className="profile-back-button"
-            type="button"
-            onClick={() => router.push("/")}
-          >
-            Back to home
-          </button>
-        </header>
+    <>
+      <header className="site-header">
+        <div className="nav-container">
+          <Link href="/" className="brand" aria-label="LetsDate home">
+            <span className="brand-mark">♡</span>
+            <span>
+              lets<span className="brand-accent">date</span>
+            </span>
+          </Link>
 
-        <section className="completion-card">
-          <div className="completion-top">
+          <AuthNavigation />
+        </div>
+      </header>
+
+      <main className="profile-page">
+        <div className="profile-container">
+          <header className="profile-heading">
             <div>
-              <h2>Profile completion</h2>
-              <p>
-                {completion.completedFields} of {completion.totalFields} profile
-                sections completed
+              <p className="profile-kicker">YOUR LETSDATE ACCOUNT</p>
+              <h1>Your profile</h1>
+              <p className="profile-subtitle">
+                Tell people a little about yourself and what you are looking
+                for.
               </p>
             </div>
-            <strong>{completion.percentage}%</strong>
-          </div>
+            <button
+              className="profile-back-button"
+              type="button"
+              onClick={() => router.push("/")}
+            >
+              Back to home
+            </button>
+          </header>
 
-          <div
-            className="completion-track"
-            role="progressbar"
-            aria-label="Profile completion"
-            aria-valuenow={completion.percentage}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div
-              className="completion-fill"
-              style={{ width: `${completion.percentage}%` }}
-            />
-          </div>
-        </section>
-
-        {error && (
-          <div className="profile-alert profile-alert-error">{error}</div>
-        )}
-        {notice && (
-          <div className="profile-alert profile-alert-success">{notice}</div>
-        )}
-
-        <section className="profile-card">
-          <div className="profile-section-heading">
-            <div>
-              <span className="profile-section-number">01</span>
-              <h2>Your photos</h2>
-              <p>Add up to six photos. Your primary photo represents you.</p>
+          <section className="completion-card">
+            <div className="completion-top">
+              <div>
+                <h2>Profile completion</h2>
+                <p>
+                  {completion.completedFields} of {completion.totalFields}{" "}
+                  profile sections completed
+                </p>
+              </div>
+              <strong>{completion.percentage}%</strong>
             </div>
-            <span className="photo-count">{photos.length}/6 photos</span>
-          </div>
 
-          <div className="photo-grid">
-            {photos.map((photo) => (
-              <article className="photo-item" key={photo.id}>
-                <img src={photo.url} alt="Your profile" />
+            <div
+              className="completion-track"
+              role="progressbar"
+              aria-label="Profile completion"
+              aria-valuenow={completion.percentage}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div
+                className="completion-fill"
+                style={{ width: `${completion.percentage}%` }}
+              />
+            </div>
+          </section>
 
-                {photo.isPrimary && (
-                  <span className="primary-photo-label">Primary photo</span>
-                )}
+          {error && (
+            <div className="profile-alert profile-alert-error">{error}</div>
+          )}
+          {notice && (
+            <div className="profile-alert profile-alert-success">{notice}</div>
+          )}
 
-                <div className="photo-actions">
-                  {!photo.isPrimary && (
-                    <button
-                      type="button"
-                      disabled={photoAction !== null}
-                      onClick={() => void setPrimaryPhoto(photo.id)}
-                    >
-                      {photoAction === photo.id
-                        ? "Please wait..."
-                        : "Make primary"}
-                    </button>
+          <section className="profile-card">
+            <div className="profile-section-heading">
+              <div>
+                <span className="profile-section-number">01</span>
+                <h2>Your photos</h2>
+                <p>Add up to six photos. Your primary photo represents you.</p>
+              </div>
+              <span className="photo-count">{photos.length}/6 photos</span>
+            </div>
+
+            <div className="photo-grid">
+              {photos.map((photo) => (
+                <article className="photo-item" key={photo.id}>
+                  <img src={photo.url} alt="Your profile" />
+
+                  {photo.isPrimary && (
+                    <span className="primary-photo-label">Primary photo</span>
                   )}
 
-                  <button
-                    type="button"
-                    className="photo-delete-button"
-                    disabled={photoAction !== null}
-                    onClick={() => void deletePhoto(photo.id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </article>
-            ))}
+                  <div className="photo-actions">
+                    {!photo.isPrimary && (
+                      <button
+                        type="button"
+                        disabled={photoAction !== null}
+                        onClick={() => void setPrimaryPhoto(photo.id)}
+                      >
+                        {photoAction === photo.id
+                          ? "Please wait..."
+                          : "Make primary"}
+                      </button>
+                    )}
 
-            {photos.length < 6 && (
-              <label className="photo-upload-tile">
-                <span className="photo-upload-plus">+</span>
-                <strong>{uploading ? "Uploading..." : "Add a photo"}</strong>
-                <small>JPEG, PNG or WebP · Max 5 MB</small>
+                    <button
+                      type="button"
+                      className="photo-delete-button"
+                      disabled={photoAction !== null}
+                      onClick={() => void deletePhoto(photo.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))}
+
+              {photos.length < 6 && (
+                <label className="photo-upload-tile">
+                  <span className="photo-upload-plus">+</span>
+                  <strong>{uploading ? "Uploading..." : "Add a photo"}</strong>
+                  <small>JPEG, PNG or WebP · Max 5 MB</small>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={uploading}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void uploadPhoto(file);
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+          </section>
+
+          <form className="profile-card profile-form" onSubmit={saveProfile}>
+            <div className="profile-section-heading">
+              <div>
+                <span className="profile-section-number">02</span>
+                <h2>About you</h2>
+                <p>Share the details that help people get to know you.</p>
+              </div>
+            </div>
+
+            <div className="profile-form-grid">
+              <label className="profile-field">
+                <span>Display name</span>
                 <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  disabled={uploading}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) void uploadPhoto(file);
-                    event.target.value = "";
-                  }}
+                  value={profile.displayName}
+                  onChange={(event) =>
+                    updateField("displayName", event.target.value)
+                  }
+                  minLength={2}
+                  maxLength={80}
+                  required
                 />
               </label>
-            )}
-          </div>
-        </section>
 
-        <form className="profile-card profile-form" onSubmit={saveProfile}>
-          <div className="profile-section-heading">
-            <div>
-              <span className="profile-section-number">02</span>
-              <h2>About you</h2>
-              <p>Share the details that help people get to know you.</p>
+              <label className="profile-field">
+                <span>Email address</span>
+                <input value={profile.email} disabled />
+                <small>Your account email cannot be changed here.</small>
+              </label>
+
+              <label className="profile-field profile-field-full">
+                <span>About me</span>
+                <textarea
+                  value={profile.bio ?? ""}
+                  onChange={(event) => updateField("bio", event.target.value)}
+                  maxLength={500}
+                  rows={5}
+                  placeholder="Write a little about yourself..."
+                />
+                <small>{(profile.bio ?? "").length}/500 characters</small>
+              </label>
+
+              <label className="profile-field">
+                <span>Date of birth</span>
+                <input
+                  type="date"
+                  value={profile.dateOfBirth ?? ""}
+                  onChange={(event) =>
+                    updateField("dateOfBirth", event.target.value)
+                  }
+                  required
+                />
+                <small>You must be at least 18 years old.</small>
+              </label>
+
+              <label className="profile-field">
+                <span>Gender</span>
+                <select
+                  value={profile.gender ?? ""}
+                  onChange={(event) =>
+                    updateField("gender", event.target.value)
+                  }
+                >
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="non-binary">Non-binary</option>
+                  <option value="other">Other</option>
+                  <option value="prefer-not-to-say">Prefer not to say</option>
+                </select>
+              </label>
+
+              <label className="profile-field">
+                <span>City</span>
+                <input
+                  value={profile.city ?? ""}
+                  onChange={(event) => updateField("city", event.target.value)}
+                  maxLength={100}
+                  placeholder="Your city"
+                />
+              </label>
+
+              <label className="profile-field">
+                <span>Country</span>
+                <input
+                  value={profile.country ?? ""}
+                  onChange={(event) =>
+                    updateField("country", event.target.value)
+                  }
+                  maxLength={100}
+                  placeholder="Your country"
+                />
+              </label>
             </div>
-          </div>
 
-          <div className="profile-form-grid">
-            <label className="profile-field">
-              <span>Display name</span>
-              <input
-                value={profile.displayName}
-                onChange={(event) =>
-                  updateField("displayName", event.target.value)
-                }
-                minLength={2}
-                maxLength={80}
-                required
-              />
-            </label>
-
-            <label className="profile-field">
-              <span>Email address</span>
-              <input value={profile.email} disabled />
-              <small>Your account email cannot be changed here.</small>
-            </label>
-
-            <label className="profile-field profile-field-full">
-              <span>About me</span>
-              <textarea
-                value={profile.bio ?? ""}
-                onChange={(event) => updateField("bio", event.target.value)}
-                maxLength={500}
-                rows={5}
-                placeholder="Write a little about yourself..."
-              />
-              <small>{(profile.bio ?? "").length}/500 characters</small>
-            </label>
-
-            <label className="profile-field">
-              <span>Date of birth</span>
-              <input
-                type="date"
-                value={profile.dateOfBirth ?? ""}
-                onChange={(event) =>
-                  updateField("dateOfBirth", event.target.value)
-                }
-                required
-              />
-              <small>You must be at least 18 years old.</small>
-            </label>
-
-            <label className="profile-field">
-              <span>Gender</span>
-              <select
-                value={profile.gender ?? ""}
-                onChange={(event) => updateField("gender", event.target.value)}
-              >
-                <option value="">Select gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="non-binary">Non-binary</option>
-                <option value="other">Other</option>
-                <option value="prefer-not-to-say">Prefer not to say</option>
-              </select>
-            </label>
-
-            <label className="profile-field">
-              <span>City</span>
-              <input
-                value={profile.city ?? ""}
-                onChange={(event) => updateField("city", event.target.value)}
-                maxLength={100}
-                placeholder="Your city"
-              />
-            </label>
-
-            <label className="profile-field">
-              <span>Country</span>
-              <input
-                value={profile.country ?? ""}
-                onChange={(event) => updateField("country", event.target.value)}
-                maxLength={100}
-                placeholder="Your country"
-              />
-            </label>
-          </div>
-
-          <div className="profile-section-heading profile-preferences-heading">
-            <div>
-              <span className="profile-section-number">03</span>
-              <h2>Dating preferences</h2>
-              <p>Tell us who you would like to meet.</p>
+            <div className="profile-section-heading profile-preferences-heading">
+              <div>
+                <span className="profile-section-number">03</span>
+                <h2>Dating preferences</h2>
+                <p>Tell us who you would like to meet.</p>
+              </div>
             </div>
-          </div>
 
-          <div className="profile-form-grid">
-            <label className="profile-field">
-              <span>Show me</span>
-              <select
-                value={profile.preferredGender ?? "everyone"}
-                onChange={(event) =>
-                  updateField("preferredGender", event.target.value)
-                }
+            <div className="profile-form-grid">
+              <label className="profile-field">
+                <span>Show me</span>
+                <select
+                  value={profile.preferredGender ?? "everyone"}
+                  onChange={(event) =>
+                    updateField("preferredGender", event.target.value)
+                  }
+                >
+                  <option value="everyone">Everyone</option>
+                  <option value="male">Men</option>
+                  <option value="female">Women</option>
+                  <option value="non-binary">Non-binary people</option>
+                </select>
+              </label>
+
+              <label className="profile-field">
+                <span>Relationship goal</span>
+                <select
+                  value={profile.relationshipGoal ?? "unsure"}
+                  onChange={(event) =>
+                    updateField("relationshipGoal", event.target.value)
+                  }
+                >
+                  <option value="long-term">Long-term relationship</option>
+                  <option value="short-term">Short-term relationship</option>
+                  <option value="friendship">Friendship</option>
+                  <option value="unsure">Still figuring it out</option>
+                </select>
+              </label>
+
+              <label className="profile-field">
+                <span>Minimum preferred age</span>
+                <input
+                  type="number"
+                  min={18}
+                  max={100}
+                  value={profile.minPreferredAge ?? 18}
+                  onChange={(event) =>
+                    updateField("minPreferredAge", Number(event.target.value))
+                  }
+                  required
+                />
+              </label>
+
+              <label className="profile-field">
+                <span>Maximum preferred age</span>
+                <input
+                  type="number"
+                  min={18}
+                  max={100}
+                  value={profile.maxPreferredAge ?? 50}
+                  onChange={(event) =>
+                    updateField("maxPreferredAge", Number(event.target.value))
+                  }
+                  required
+                />
+              </label>
+            </div>
+
+            <div className="profile-form-footer">
+              <p>Your profile is saved securely to your LetsDate account.</p>
+              <button
+                className="profile-save-button"
+                type="submit"
+                disabled={saving}
               >
-                <option value="everyone">Everyone</option>
-                <option value="male">Men</option>
-                <option value="female">Women</option>
-                <option value="non-binary">Non-binary people</option>
-              </select>
-            </label>
-
-            <label className="profile-field">
-              <span>Relationship goal</span>
-              <select
-                value={profile.relationshipGoal ?? "unsure"}
-                onChange={(event) =>
-                  updateField("relationshipGoal", event.target.value)
-                }
-              >
-                <option value="long-term">Long-term relationship</option>
-                <option value="short-term">Short-term relationship</option>
-                <option value="friendship">Friendship</option>
-                <option value="unsure">Still figuring it out</option>
-              </select>
-            </label>
-
-            <label className="profile-field">
-              <span>Minimum preferred age</span>
-              <input
-                type="number"
-                min={18}
-                max={100}
-                value={profile.minPreferredAge ?? 18}
-                onChange={(event) =>
-                  updateField("minPreferredAge", Number(event.target.value))
-                }
-                required
-              />
-            </label>
-
-            <label className="profile-field">
-              <span>Maximum preferred age</span>
-              <input
-                type="number"
-                min={18}
-                max={100}
-                value={profile.maxPreferredAge ?? 50}
-                onChange={(event) =>
-                  updateField("maxPreferredAge", Number(event.target.value))
-                }
-                required
-              />
-            </label>
-          </div>
-
-          <div className="profile-form-footer">
-            <p>Your profile is saved securely to your LetsDate account.</p>
-            <button
-              className="profile-save-button"
-              type="submit"
-              disabled={saving}
-            >
-              {saving ? "Saving..." : "Save profile"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </main>
+                {saving ? "Saving..." : "Save profile"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </>
   );
 }
