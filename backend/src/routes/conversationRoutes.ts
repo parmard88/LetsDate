@@ -1,3 +1,4 @@
+
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../config/database.js";
@@ -177,6 +178,30 @@ router.get("/", async (_req, res): Promise<void> => {
       },
     });
 
+    // Count unread incoming messages across all conversations in one query.
+    const conversationIds = conversations.map(
+      (conversation) => conversation.id
+    );
+
+    const unreadGroups = await prisma.message.groupBy({
+      by: ["conversationId"],
+      where: {
+        conversationId: { in: conversationIds },
+        senderId: { not: userId },
+        readAt: null,
+      },
+      _count: {
+        _all: true,
+      },
+    });
+
+    const unreadCounts = new Map(
+      unreadGroups.map((group) => [
+        group.conversationId,
+        group._count._all,
+      ])
+    );
+
     const results = await Promise.all(
       conversations.map(async (conversation) => {
         const otherUser =
@@ -191,6 +216,7 @@ router.get("/", async (_req, res): Promise<void> => {
           id: conversation.id,
           createdAt: conversation.createdAt,
           lastMessageAt: conversation.lastMessageAt,
+          unreadCount: unreadCounts.get(conversation.id) ?? 0,
           user: {
             id: otherUser.id,
             displayName: otherUser.displayName,
@@ -220,6 +246,96 @@ router.get("/", async (_req, res): Promise<void> => {
     });
   }
 });
+
+// PATCH /api/conversations/:conversationId/read
+// Marks incoming unread messages as read for the authenticated user.
+router.patch(
+  "/:conversationId/read",
+  async (
+    req: Request<{ conversationId: string }>,
+    res: Response
+  ): Promise<void> => {
+    const userId = res.locals.userId as string;
+    const conversationId = req.params.conversationId;
+
+    if (!conversationId || conversationId.length > 30) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid conversation ID.",
+      });
+      return;
+    }
+
+    try {
+      const access = await getAccessibleConversation(conversationId, userId);
+
+      if (!access.conversation) {
+        res.status(access.status).json({
+          success: false,
+          message: "Conversation not found or unavailable.",
+        });
+        return;
+      }
+
+      const readAt = new Date();
+
+      const result = await prisma.$transaction(async (transaction) => {
+        const unreadMessages = await transaction.message.findMany({
+          where: {
+            conversationId,
+            senderId: { not: userId },
+            readAt: null,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        if (unreadMessages.length === 0) {
+          return {
+            count: 0,
+            messageIds: [] as string[],
+          };
+        }
+
+        const messageIds = unreadMessages.map((message) => message.id);
+
+        const updated = await transaction.message.updateMany({
+          where: {
+            id: { in: messageIds },
+            conversationId,
+            senderId: { not: userId },
+            readAt: null,
+          },
+          data: {
+            readAt,
+          },
+        });
+
+        return {
+          count: updated.count,
+          messageIds:
+            updated.count === messageIds.length ? messageIds : [],
+        };
+      });
+
+      res.status(200).json({
+        success: true,
+        conversationId,
+        readAt: result.count > 0 ? readAt : null,
+        count: result.count,
+        messageIds: result.messageIds,
+      });
+    } catch {
+      console.error("Marking conversation messages as read failed.");
+
+      res.status(500).json({
+        success: false,
+        message: "Unable to mark messages as read right now.",
+      });
+    }
+  }
+);
 
 // GET /api/conversations/:conversationId/messages
 router.get(
@@ -292,6 +408,7 @@ router.get(
           id: true,
           body: true,
           senderId: true,
+          readAt: true,
           createdAt: true,
         },
       });
@@ -371,6 +488,7 @@ router.post(
             conversationId: true,
             senderId: true,
             body: true,
+            readAt: true,
             createdAt: true,
           },
         });

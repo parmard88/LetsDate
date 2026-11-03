@@ -1,14 +1,32 @@
+
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { apiRequest } from "@/lib/api";
+import { getSocket } from "@/lib/socket";
 import styles from "./messages.module.css";
+
+type Message = {
+  id: string;
+  conversationId: string;
+  body: string;
+  senderId: string;
+  createdAt: string;
+  readAt?: string | null;
+};
+
+type ReadReceiptEvent = {
+  conversationId: string;
+  messageIds: string[];
+  readAt: string;
+};
 
 type Conversation = {
   id: string;
   createdAt: string;
   lastMessageAt: string | null;
+  unreadCount: number;
   user: {
     id: string;
     displayName: string;
@@ -31,6 +49,13 @@ type ConversationsResponse = {
   conversations: Conversation[];
 };
 
+type AuthResponse = {
+  success?: boolean;
+  user?: {
+    id: string;
+  };
+};
+
 function formatMessageTime(value: string | null): string {
   if (!value) return "";
 
@@ -44,20 +69,43 @@ function formatMessageTime(value: string | null): string {
   });
 }
 
+function sortConversations(items: Conversation[]): Conversation[] {
+  return [...items].sort((a, b) => {
+    const aTime = new Date(a.lastMessageAt ?? a.createdAt).getTime();
+    const bTime = new Date(b.lastMessageAt ?? b.createdAt).getTime();
+
+    return bTime - aTime;
+  });
+}
+
 export default function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const currentUserIdRef = useRef<string | null>(null);
+  const processedMessageIdsRef = useRef<Set<string>>(new Set());
+
   const loadConversations = useCallback(async () => {
     try {
       setError("");
 
-      const response = await apiRequest<ConversationsResponse>(
-        "/conversations"
-      );
+      const [conversationResponse, authResponse] = await Promise.all([
+        apiRequest<ConversationsResponse>("/conversations"),
+        apiRequest<AuthResponse>("/auth/me"),
+      ]);
 
-      setConversations(response.conversations ?? []);
+      const userId = authResponse.user?.id ?? null;
+      currentUserIdRef.current = userId;
+
+      const loadedConversations = (
+        conversationResponse.conversations ?? []
+      ).map((conversation) => ({
+        ...conversation,
+        unreadCount: conversation.unreadCount ?? 0,
+      }));
+
+      setConversations(sortConversations(loadedConversations));
     } catch (err) {
       setError(
         err instanceof Error
@@ -71,27 +119,106 @@ export default function MessagesPage() {
 
   useEffect(() => {
     const fetchConversations = async () => {
-      try {
-        setError("");
-        const response = await apiRequest<ConversationsResponse>(
-          "/conversations"
-        );
-        setConversations(response.conversations ?? []);
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Unable to load your conversations."
-        );
-      } finally {
-        setLoading(false);
-      }
+      await loadConversations();
     };
 
-    fetchConversations().catch((err) => {
-      console.error("Failed to load conversations:", err);
-    });
-  }, []);
+    fetchConversations();
+
+    const socket = getSocket();
+
+    const handleNewMessage = (message: Message) => {
+      if (
+        !message ||
+        !message.id ||
+        !message.conversationId ||
+        !message.senderId
+      ) {
+        return;
+      }
+
+      // Prevent the same message being counted more than once.
+      if (processedMessageIdsRef.current.has(message.id)) {
+        return;
+      }
+
+      processedMessageIdsRef.current.add(message.id);
+
+      // Keep the deduplication set from growing indefinitely.
+      if (processedMessageIdsRef.current.size > 300) {
+        const oldestId = processedMessageIdsRef.current.values().next().value;
+
+        if (oldestId) {
+          processedMessageIdsRef.current.delete(oldestId);
+        }
+      }
+
+      setConversations((previousConversations) => {
+        const conversationExists = previousConversations.some(
+          (conversation) => conversation.id === message.conversationId
+        );
+
+        if (!conversationExists) {
+          return previousConversations;
+        }
+
+        const currentUserId = currentUserIdRef.current;
+
+        const updatedConversations = previousConversations.map(
+          (conversation) => {
+            if (conversation.id !== message.conversationId) {
+              return conversation;
+            }
+
+            const isIncomingMessage =
+              currentUserId !== null && message.senderId !== currentUserId;
+
+            return {
+              ...conversation,
+              lastMessageAt: message.createdAt,
+              lastMessage: {
+                id: message.id,
+                body: message.body,
+                senderId: message.senderId,
+                createdAt: message.createdAt,
+              },
+              unreadCount:
+                conversation.unreadCount + (isIncomingMessage ? 1 : 0),
+            };
+          }
+        );
+
+        return sortConversations(updatedConversations);
+      });
+    };
+
+    const handleReadReceipt = (receipt: ReadReceiptEvent) => {
+      if (!receipt?.conversationId) {
+        return;
+      }
+
+      // Reconcile the unread count with the database.
+      // This works for both the reader and the original sender.
+      void loadConversations();
+    };
+
+    const handleReconnect = () => {
+      void loadConversations();
+    };
+
+    socket.on("message:new", handleNewMessage);
+    socket.on("message:read", handleReadReceipt);
+    socket.on("connect", handleReconnect);
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    return () => {
+      socket.off("message:new", handleNewMessage);
+      socket.off("message:read", handleReadReceipt);
+      socket.off("connect", handleReconnect);
+    };
+  }, [loadConversations]);
 
   return (
     <main className={styles.container}>
@@ -152,6 +279,7 @@ export default function MessagesPage() {
               <div className={styles.details}>
                 <div className={styles.nameRow}>
                   <h2>{conversation.user.displayName}</h2>
+
                   <time>
                     {formatMessageTime(
                       conversation.lastMessage?.createdAt ??
@@ -160,10 +288,18 @@ export default function MessagesPage() {
                   </time>
                 </div>
 
-                <p>
-                  {conversation.lastMessage?.body ??
-                    "You matched! Start a conversation."}
-                </p>
+                <div className={styles.previewRow}>
+                  <p>
+                    {conversation.lastMessage?.body ??
+                      "You matched! Start a conversation."}
+                  </p>
+
+                  {conversation.unreadCount > 0 && (
+                    <span className={styles.unreadBadge}>
+                      {conversation.unreadCount}
+                    </span>
+                  )}
+                </div>
               </div>
             </Link>
           ))}

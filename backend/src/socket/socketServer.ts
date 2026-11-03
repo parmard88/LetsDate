@@ -94,7 +94,6 @@ export function createSocketServer(
     },
     allowRequest: (request, callback) => {
       const origin = request.headers.origin;
-
       callback(null, origin === frontendUrl);
     },
   });
@@ -121,10 +120,13 @@ export function createSocketServer(
 
   io.on("connection", (socket) => {
     const authenticatedSocket = socket as AuthenticatedSocket;
+    const userId = authenticatedSocket.data.userId;
+
+    // Every authenticated connection joins its own private user room.
+    void socket.join(`user:${userId}`);
 
     console.log("Authenticated Socket.IO client connected.");
 
-    // Join only after the server verifies conversation membership.
     socket.on(
       "conversation:join",
       async (payload: unknown, acknowledge?: Acknowledgement) => {
@@ -143,7 +145,8 @@ export function createSocketServer(
 
           const { conversationId } = parsed.data;
 
-          if (socket.rooms.size >= 11) {
+          // The socket belongs to its private user room as well.
+          if (socket.rooms.size >= 12) {
             acknowledge?.({
               success: false,
               message: "Too many active conversation rooms.",
@@ -151,10 +154,7 @@ export function createSocketServer(
             return;
           }
 
-          const allowed = await canAccessConversation(
-            conversationId,
-            authenticatedSocket.data.userId
-          );
+          const allowed = await canAccessConversation(conversationId, userId);
 
           if (!allowed) {
             acknowledge?.({
@@ -228,14 +228,22 @@ export function createSocketServer(
               conversationId: true,
               senderId: true,
               body: true,
+              readAt: true,
               createdAt: true,
+              conversation: {
+                select: {
+                  match: {
+                    select: {
+                      userOneId: true,
+                      userTwoId: true,
+                    },
+                  },
+                },
+              },
             },
           });
 
-          if (
-            !message ||
-            message.senderId !== authenticatedSocket.data.userId
-          ) {
+          if (!message || message.senderId !== userId) {
             acknowledge?.({
               success: false,
               message: "Message not found or unavailable.",
@@ -245,7 +253,7 @@ export function createSocketServer(
 
           const allowed = await canAccessConversation(
             message.conversationId,
-            authenticatedSocket.data.userId
+            userId
           );
 
           if (!allowed) {
@@ -256,9 +264,9 @@ export function createSocketServer(
             return;
           }
 
-          const room = `conversation:${message.conversationId}`;
+          const conversationRoom = `conversation:${message.conversationId}`;
 
-          if (!socket.rooms.has(room)) {
+          if (!socket.rooms.has(conversationRoom)) {
             acknowledge?.({
               success: false,
               message: "Join the conversation before publishing.",
@@ -266,7 +274,24 @@ export function createSocketServer(
             return;
           }
 
-          io.to(room).emit("message:new", message);
+          const messagePayload = {
+            id: message.id,
+            conversationId: message.conversationId,
+            senderId: message.senderId,
+            body: message.body,
+            readAt: message.readAt,
+            createdAt: message.createdAt,
+          };
+
+          const { userOneId, userTwoId } = message.conversation.match;
+
+          // Keep the existing open-chat broadcast.
+          io.to(conversationRoom).emit("message:new", messagePayload);
+
+          // Also notify both participants' private rooms.
+          // This updates inboxes even when neither user has this chat open.
+          io.to(`user:${userOneId}`).emit("message:new", messagePayload);
+          io.to(`user:${userTwoId}`).emit("message:new", messagePayload);
 
           acknowledge?.({
             success: true,
@@ -276,6 +301,125 @@ export function createSocketServer(
           acknowledge?.({
             success: false,
             message: "Unable to publish this message.",
+          });
+        }
+      }
+    );
+
+    // Broadcast read receipts only for messages already marked read in the DB.
+    socket.on(
+      "message:read",
+      async (payload: unknown, acknowledge?: Acknowledgement) => {
+        try {
+          const parsed = z
+            .object({
+              conversationId: conversationIdSchema,
+              messageIds: z
+                .array(messageIdSchema)
+                .min(1)
+                .max(100)
+                .refine(
+                  (ids) => new Set(ids).size === ids.length,
+                  "Duplicate message IDs are not allowed."
+                ),
+            })
+            .safeParse(payload);
+
+          if (!parsed.success) {
+            acknowledge?.({
+              success: false,
+              message: "Invalid read receipt request.",
+            });
+            return;
+          }
+
+          const { conversationId, messageIds } = parsed.data;
+
+          const allowed = await canAccessConversation(conversationId, userId);
+
+          if (!allowed) {
+            acknowledge?.({
+              success: false,
+              message: "Conversation not found or unavailable.",
+            });
+            return;
+          }
+
+          const messages = await prisma.message.findMany({
+            where: {
+              id: { in: messageIds },
+              conversationId,
+              senderId: { not: userId },
+              readAt: { not: null },
+            },
+            select: {
+              id: true,
+              senderId: true,
+              readAt: true,
+            },
+          });
+
+          if (messages.length === 0) {
+            acknowledge?.({
+              success: true,
+              message: "No verified read receipts to publish.",
+            });
+            return;
+          }
+
+          // Group by original sender and read timestamp.
+          // The recipient cannot claim that their own messages were read.
+          const receiptGroups = new Map<
+            string,
+            { senderId: string; readAt: Date; messageIds: string[] }
+          >();
+
+          for (const message of messages) {
+            if (!message.readAt) {
+              continue;
+            }
+
+            const timestamp = message.readAt.toISOString();
+            const key = `${message.senderId}:${timestamp}`;
+
+            const existing = receiptGroups.get(key);
+
+            if (existing) {
+              existing.messageIds.push(message.id);
+            } else {
+              receiptGroups.set(key, {
+                senderId: message.senderId,
+                readAt: message.readAt,
+                messageIds: [message.id],
+              });
+            }
+          }
+
+          for (const group of receiptGroups.values()) {
+            const receiptPayload = {
+              conversationId,
+              messageIds: group.messageIds,
+              readAt: group.readAt,
+            };
+
+            // Notify the original sender so their chat can show "Read".
+            io.to(`user:${group.senderId}`).emit(
+              "message:read",
+              receiptPayload
+            );
+
+            // Notify the reader's other sessions so their inbox can update.
+            io.to(`user:${userId}`).emit("message:read", receiptPayload);
+          }
+
+          acknowledge?.({
+            success: true,
+            message: "Read receipts delivered.",
+          });
+        } catch {
+          acknowledge?.({
+            success: false,
+            message: "Unable to publish read receipts.",
           });
         }
       }

@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { apiRequest } from "@/lib/api";
 import { getSocket } from "@/lib/socket";
@@ -19,6 +19,7 @@ type Message = {
   conversationId?: string;
   senderId: string;
   body: string;
+  readAt: string | null;
   createdAt: string;
 };
 
@@ -35,6 +36,20 @@ type HistoryResponse = {
 type SendResponse = {
   success: boolean;
   message: Message;
+};
+
+type ReadResponse = {
+  success: boolean;
+  conversationId: string;
+  readAt: string;
+  count: number;
+  messageIds: string[];
+};
+
+type ReadReceiptEvent = {
+  conversationId: string;
+  messageIds: string[];
+  readAt: string;
 };
 
 type ConversationResponse = {
@@ -63,7 +78,6 @@ function formatTime(value: string): string {
 
 function ChatPageContent() {
   const params = useParams<{ conversationId: string }>();
-  const router = useRouter();
   const conversationId = params.conversationId;
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -76,11 +90,84 @@ function ChatPageContent() {
   const [socketConnected, setSocketConnected] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  const currentUserIdRef = useRef<string | null>(null);
+  const markReadInFlightRef = useRef(false);
+  const markReadAgainRef = useRef(false);
+  const pendingReadReceiptsRef = useRef<ReadReceiptEvent[]>([]);
+
+  const flushPendingReadReceipts = useCallback(() => {
+    const socket = getSocket();
+
+    if (!socket.connected || pendingReadReceiptsRef.current.length === 0) {
+      return;
+    }
+
+    const pending = [...pendingReadReceiptsRef.current];
+    pendingReadReceiptsRef.current = [];
+
+    for (const receipt of pending) {
+      socket.emit("message:read", receipt);
+    }
+  }, [pendingReadReceiptsRef]);
+
+  const markConversationRead = useCallback(async () => {
+    if (!currentUserIdRef.current) {
+      return;
+    }
+
+    if (markReadInFlightRef.current) {
+      markReadAgainRef.current = true;
+      return;
+    }
+
+    markReadInFlightRef.current = true;
+
+    try {
+      do {
+        markReadAgainRef.current = false;
+
+        const response = await apiRequest<ReadResponse>(
+          `/conversations/${conversationId}/read`,
+          {
+            method: "PATCH",
+          }
+        );
+
+        if (response.messageIds?.length > 0 && response.readAt) {
+          const messageIdSet = new Set(response.messageIds);
+
+          setMessages((currentMessages) =>
+            currentMessages.map((message) =>
+              messageIdSet.has(message.id)
+                ? { ...message, readAt: response.readAt }
+                : message
+            )
+          );
+
+          pendingReadReceiptsRef.current.push({
+            conversationId,
+            messageIds: response.messageIds,
+            readAt: response.readAt,
+          });
+
+          flushPendingReadReceipts();
+        }
+      } while (markReadAgainRef.current);
+    } catch (err) {
+      console.error("Unable to mark conversation as read.", err);
+    } finally {
+      markReadInFlightRef.current = false;
+    }
+  }, [conversationId, flushPendingReadReceipts]);
 
   const addMessage = useCallback((message: Message) => {
     setMessages((current) => {
-      if (current.some((item) => item.id === message.id)) {
-        return current;
+      const existingIndex = current.findIndex((item) => item.id === message.id);
+
+      if (existingIndex !== -1) {
+        return current.map((item) =>
+          item.id === message.id ? { ...item, ...message } : item
+        );
       }
 
       return [...current, message].sort(
@@ -111,9 +198,13 @@ function ChatPageContent() {
         return;
       }
 
+      currentUserIdRef.current = auth.user.id;
       setCurrentUserId(auth.user.id);
       setOtherUserName(activeConversation.user.displayName);
       setMessages(history.messages ?? []);
+
+      // Mark incoming messages from this conversation as read.
+      await markConversationRead();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to load this conversation."
@@ -121,14 +212,13 @@ function ChatPageContent() {
     } finally {
       setLoading(false);
     }
-  }, [conversationId]);
+  }, [conversationId, markConversationRead]);
 
   useEffect(() => {
-    const fetchChat = async () => {
+    const load = async () => {
       await loadChat();
     };
-
-    fetchChat();
+    load();
   }, [loadChat]);
 
   useEffect(() => {
@@ -139,6 +229,7 @@ function ChatPageContent() {
     const joinConversation = () => {
       setSocketConnected(true);
       socket.emit("conversation:join", { conversationId });
+      flushPendingReadReceipts();
     };
 
     const handleDisconnect = () => {
@@ -151,7 +242,35 @@ function ChatPageContent() {
         !message?.conversationId
       ) {
         addMessage(message);
+
+        // A message arriving while this conversation is open is read
+        // automatically, provided it was sent by the other participant.
+        if (
+          currentUserIdRef.current &&
+          message.senderId !== currentUserIdRef.current
+        ) {
+          void markConversationRead();
+        }
       }
+    };
+
+    const handleReadReceipt = (receipt: ReadReceiptEvent) => {
+      if (
+        receipt?.conversationId !== conversationId ||
+        !Array.isArray(receipt.messageIds)
+      ) {
+        return;
+      }
+
+      const messageIdSet = new Set(receipt.messageIds);
+
+      setMessages((currentMessages) =>
+        currentMessages.map((message) =>
+          messageIdSet.has(message.id)
+            ? { ...message, readAt: receipt.readAt }
+            : message
+        )
+      );
     };
 
     const handleConnectError = () => {
@@ -162,6 +281,7 @@ function ChatPageContent() {
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleConnectError);
     socket.on("message:new", handleNewMessage);
+    socket.on("message:read", handleReadReceipt);
 
     socket.connect();
 
@@ -174,10 +294,16 @@ function ChatPageContent() {
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);
       socket.off("message:new", handleNewMessage);
+      socket.off("message:read", handleReadReceipt);
       socket.emit("conversation:leave", { conversationId });
       socket.disconnect();
     };
-  }, [conversationId, addMessage]);
+  }, [
+    conversationId,
+    addMessage,
+    markConversationRead,
+    flushPendingReadReceipts,
+  ]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -272,7 +398,14 @@ function ChatPageContent() {
                   }`}
                 >
                   <p>{message.body}</p>
-                  <time>{formatTime(message.createdAt)}</time>
+
+                  <div className={styles.messageMeta}>
+                    <time>{formatTime(message.createdAt)}</time>
+
+                    {isMine && message.readAt && (
+                      <span className={styles.readReceipt}>Read</span>
+                    )}
+                  </div>
                 </div>
               </div>
             );
