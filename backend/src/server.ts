@@ -1,17 +1,20 @@
 import "dotenv/config";
 
 import express, { type ErrorRequestHandler } from "express";
+import { createServer } from "node:http";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import { z } from "zod";
 import { prisma } from "./config/database.js";
+import { createSocketServer } from "./socket/socketServer.js";
 import authRoutes from "./routes/authRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import photoRoutes from "./routes/photoRoutes.js";
 import discoveryRoutes from "./routes/discoveryRoutes.js";
 import matchingRoutes from "./routes/matchingRoutes.js";
+import conversationRoutes from "./routes/conversationRoutes.js";
 
 const environmentSchema = z.object({
   NODE_ENV: z
@@ -101,6 +104,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/profile/photos", photoRoutes);
 app.use("/api/discovery", discoveryRoutes);
 app.use("/api/matches", matchingRoutes);
+app.use("/api/conversations", conversationRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({
@@ -136,7 +140,12 @@ const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
 
 app.use(errorHandler);
 
-const server = app.listen(env.PORT, "127.0.0.1", () => {
+// Use one HTTP server for Express and Socket.IO.
+const httpServer = createServer(app);
+
+const io = createSocketServer(httpServer, env.FRONTEND_URL);
+
+httpServer.listen(env.PORT, "127.0.0.1", () => {
   console.log("==================================");
   console.log("LetsDate API started successfully");
   console.log(`Environment: ${env.NODE_ENV}`);
@@ -145,6 +154,7 @@ const server = app.listen(env.PORT, "127.0.0.1", () => {
   console.log(`Database health: http://localhost:${env.PORT}/api/health/db`);
   console.log(`Registration: http://localhost:${env.PORT}/api/auth/register`);
   console.log(`Profile: http://localhost:${env.PORT}/api/profile`);
+  console.log("Socket.IO: enabled");
   console.log("==================================");
 });
 
@@ -158,12 +168,7 @@ const shutdown = (signal: string): void => {
   shuttingDown = true;
   console.log(`${signal} received. Shutting down gracefully.`);
 
-  server.close((error) => {
-    if (error) {
-      console.error("HTTP server shutdown failed.");
-      process.exitCode = 1;
-    }
-
+  io.close(() => {
     void prisma.$disconnect().catch(() => {
       console.error("Database connection shutdown failed.");
       process.exitCode = 1;

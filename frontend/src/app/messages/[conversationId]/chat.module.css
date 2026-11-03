@@ -1,0 +1,194 @@
+
+.container {
+    width: min(100% - 32px, 800px);
+    height: min(760px, calc(100vh - 120px));
+    min-height: 480px;
+    margin: 30px auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #e8e8e8;
+    border-radius: 14px;
+    background: #fff;
+  }
+  
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 18px 22px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .backLink {
+    color: #d6336c;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  
+  .person h1 {
+    margin: 0;
+    font-size: 19px;
+  }
+  
+  .person span {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 12px;
+  }
+  
+  .online {
+    color: #218838;
+  }
+  
+  .offline {
+    color: #888;
+  }
+  
+  .messageList {
+    flex: 1;
+    padding: 22px;
+    overflow-y: auto;
+    background: #fafafa;
+  }
+  
+  .messageRow {
+    display: flex;
+    margin: 10px 0;
+  }
+  
+  .mine {
+    justify-content: flex-end;
+  }
+  
+  .theirs {
+    justify-content: flex-start;
+  }
+  
+  .bubble {
+    max-width: min(75%, 520px);
+    padding: 11px 14px 7px;
+    border-radius: 14px;
+    overflow-wrap: anywhere;
+  }
+  
+  .bubble p {
+    margin: 0;
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+  
+  .bubble time {
+    display: block;
+    margin-top: 6px;
+    font-size: 11px;
+    text-align: right;
+    opacity: 0.7;
+  }
+  
+  .myBubble {
+    border-bottom-right-radius: 4px;
+    background: #d6336c;
+    color: #fff;
+  }
+  
+  .theirBubble {
+    border: 1px solid #e8e8e8;
+    border-bottom-left-radius: 4px;
+    background: #fff;
+    color: #222;
+  }
+  
+  .empty {
+    display: grid;
+    min-height: 100%;
+    place-items: center;
+    color: #777;
+    text-align: center;
+  }
+  
+  .composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    padding: 15px;
+    border-top: 1px solid #eee;
+    background: #fff;
+  }
+  
+  .composer textarea {
+    flex: 1;
+    min-width: 0;
+    resize: vertical;
+    max-height: 140px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font: inherit;
+  }
+  
+  .composer textarea:focus {
+    outline: 2px solid #f3bfd1;
+    border-color: #d6336c;
+  }
+  
+  .composer button {
+    min-width: 82px;
+    padding: 12px 17px;
+    border: 0;
+    border-radius: 9px;
+    background: #d6336c;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  
+  .composer button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  
+  .status {
+    width: min(100% - 32px, 800px);
+    margin: 60px auto;
+    color: #777;
+    text-align: center;
+  }
+  
+  .status a {
+    color: #d6336c;
+  }
+  
+  .error {
+    margin: 0;
+    padding: 8px 16px;
+    background: #fff0f0;
+    color: #a52222;
+    font-size: 13px;
+  }
+  
+  @media (max-width: 520px) {
+    .container {
+      width: 100%;
+      height: calc(100dvh - 70px);
+      min-height: 400px;
+      margin: 0;
+      border-right: 0;
+      border-left: 0;
+      border-radius: 0;
+    }
+  
+    .header {
+      padding: 14px;
+    }
+  
+    .messageList {
+      padding: 14px;
+    }
+  
+    .bubble {
+      max-width: 88%;
+    }
+  }
+  

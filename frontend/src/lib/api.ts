@@ -4,8 +4,7 @@ if (!API_BASE_URL) {
   throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
 }
 
-type ApiResponse = {
-  success?: boolean;
+type ApiErrorResponse = {
   message?: string;
   error?: string;
 };
@@ -20,11 +19,12 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest<T extends ApiResponse>(
+export async function apiRequest<T = unknown>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
   const headers = new Headers(options.headers);
+
   const isFormData =
     typeof FormData !== "undefined" && options.body instanceof FormData;
 
@@ -46,14 +46,18 @@ export async function apiRequest<T extends ApiResponse>(
     );
   }
 
-  const data = (await response.json().catch(() => ({}))) as T;
+  const data: unknown = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    const errorData = data as ApiErrorResponse;
+
     throw new ApiError(
-      data.message || data.error || "Something went wrong. Please try again.",
+      errorData.message ||
+        errorData.error ||
+        "Something went wrong. Please try again.",
       response.status
     );
   }
 
-  return data;
+  return data as T;
 }

@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -14,13 +13,13 @@ enum SwipeAction {
 }
 
 model User {
-  id            String    @id @default(cuid()) @db.VarChar(30)
-  email         String    @unique @db.VarChar(254)
-  passwordHash  String    @db.VarChar(255)
-  displayName   String    @db.VarChar(80)
-  emailVerified Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id            String   @id @default(cuid()) @db.VarChar(30)
+  email         String   @unique @db.VarChar(254)
+  passwordHash  String   @db.VarChar(255)
+  displayName   String   @db.VarChar(80)
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   sessions          Session[]
   verificationToken VerificationToken?
@@ -28,14 +27,17 @@ model User {
   photos            UserPhoto[]
 
   // Discovery and matching relations
-  swipesGiven       Swipe[] @relation("SwipeActor")
-  swipesReceived    Swipe[] @relation("SwipeTarget")
+  swipesGiven    Swipe[] @relation("SwipeActor")
+  swipesReceived Swipe[] @relation("SwipeTarget")
 
-  matchesAsUserOne  Match[] @relation("MatchUserOne")
-  matchesAsUserTwo  Match[] @relation("MatchUserTwo")
+  matchesAsUserOne Match[] @relation("MatchUserOne")
+  matchesAsUserTwo Match[] @relation("MatchUserTwo")
 
-  blocksCreated     Block[] @relation("Blocker")
-  blocksReceived    Block[] @relation("Blocked")
+  blocksCreated  Block[] @relation("Blocker")
+  blocksReceived Block[] @relation("Blocked")
+
+  // Messaging relation
+  messagesSent Message[] @relation("MessageSender")
 
   @@map("users")
 }
@@ -68,24 +70,24 @@ model VerificationToken {
 }
 
 model UserProfile {
-  id               String    @id @default(cuid()) @db.VarChar(30)
-  userId           String    @unique @db.VarChar(30)
+  id     String @id @default(cuid()) @db.VarChar(30)
+  userId String @unique @db.VarChar(30)
 
   // Personal profile
-  bio              String?   @db.VarChar(500)
-  dateOfBirth      DateTime? @db.Date
-  gender           String?   @db.VarChar(40)
-  city             String?   @db.VarChar(100)
-  country          String?   @db.VarChar(100)
+  bio         String?   @db.VarChar(500)
+  dateOfBirth DateTime? @db.Date
+  gender      String?   @db.VarChar(40)
+  city        String?   @db.VarChar(100)
+  country     String?   @db.VarChar(100)
 
   // Dating preferences
-  preferredGender  String?   @db.VarChar(40)
+  preferredGender  String? @db.VarChar(40)
   minPreferredAge  Int?
   maxPreferredAge  Int?
-  relationshipGoal String?   @db.VarChar(60)
+  relationshipGoal String? @db.VarChar(60)
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -135,6 +137,9 @@ model Match {
   userOne User @relation("MatchUserOne", fields: [userOneId], references: [id], onDelete: Cascade)
   userTwo User @relation("MatchUserTwo", fields: [userTwoId], references: [id], onDelete: Cascade)
 
+  // One conversation per mutual match
+  conversation Conversation?
+
   @@unique([userOneId, userTwoId])
   @@index([userOneId, createdAt])
   @@index([userTwoId, createdAt])
@@ -153,4 +158,33 @@ model Block {
   @@unique([blockerId, blockedUserId])
   @@index([blockedUserId])
   @@map("blocks")
+}
+
+model Conversation {
+  id            String    @id @default(cuid()) @db.VarChar(30)
+  matchId       String    @unique @db.VarChar(30)
+  lastMessageAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  match    Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(cuid()) @db.VarChar(30)
+  conversationId String   @db.VarChar(30)
+  senderId       String   @db.VarChar(30)
+  body           String   @db.VarChar(2000)
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt, id])
+  @@index([senderId, createdAt])
+  @@map("messages")
 }
