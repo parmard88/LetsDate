@@ -1,13 +1,14 @@
-import { createStackNavigator } from "@react-navigation/stack";
-import { NavigationContainer } from "@react-navigation/native";
-import React, { useState, useEffect, useCallback } from "react";
-import { View, Text } from "react-native";
+import { createStackNavigator } from '@react-navigation/stack';
+import { NavigationContainer } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, ActivityIndicator } from 'react-native';
+import type { Theme } from '@react-navigation/native';
 
-import { apiRequest } from "@/lib/api";
-import { sessionService } from "@/services/session";
-import { MeResponse } from "@/types/api";
-import { COLORS } from "@/theme";
-import { WelcomeScreen } from "@/screens/auth/WelcomeScreen";
+import { apiRequest } from '../lib/api';
+import { sessionService } from '../services/session';
+import { MeResponse } from '../types/api';
+import { COLORS } from '../theme';
+import { AuthScreen } from '../screens/auth/AuthScreen';
 
 const Stack = createStackNavigator();
 
@@ -15,8 +16,6 @@ export type RootStackParamList = {
   Auth: undefined;
   App: undefined;
 };
-
-import type { Theme } from "@react-navigation/native";
 
 const navigationTheme: Theme = {
   dark: false,
@@ -29,10 +28,10 @@ const navigationTheme: Theme = {
     notification: COLORS.primary,
   },
   fonts: {
-    regular: { fontFamily: "Arial", fontWeight: "400" },
-    medium: { fontFamily: "Arial", fontWeight: "500" },
-    bold: { fontFamily: "Arial", fontWeight: "700" },
-    heavy: { fontFamily: "Arial", fontWeight: "900" },
+    regular: { fontFamily: 'Arial', fontWeight: '400' },
+    medium: { fontFamily: 'Arial', fontWeight: '500' },
+    bold: { fontFamily: 'Arial', fontWeight: '700' },
+    heavy: { fontFamily: 'Arial', fontWeight: '900' },
   },
 };
 
@@ -49,7 +48,7 @@ export default function RootNavigator() {
         return;
       }
 
-      const response = await apiRequest<MeResponse>("/api/auth/me");
+      const response = await apiRequest<MeResponse>('/api/auth/me');
       if (response.success) {
         setIsAuthenticated(true);
       } else {
@@ -65,7 +64,7 @@ export default function RootNavigator() {
   }, []);
 
   useEffect(() => {
-    void checkSession();
+    checkSession();
   }, [checkSession]);
 
   if (loading) {
@@ -74,11 +73,11 @@ export default function RootNavigator() {
         style={{
           flex: 1,
           backgroundColor: COLORS.background,
-          justifyContent: "center",
-          alignItems: "center",
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
       >
-        <Text style={{ color: COLORS.muted, fontSize: 14 }}>Loading…</Text>
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -89,7 +88,12 @@ export default function RootNavigator() {
         {isAuthenticated ? (
           <Stack.Screen name="App" component={() => null} />
         ) : (
-          <Stack.Screen name="Auth" component={WelcomeScreen} />
+          <Stack.Screen
+            name="Auth"
+            component={() => (
+              <AuthScreen onAuthSuccess={() => checkSession()} />
+            )}
+          />
         )}
       </Stack.Navigator>
     </NavigationContainer>

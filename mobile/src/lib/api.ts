@@ -1,7 +1,9 @@
-import { ApiError } from "@/types/api";
-import { sessionService } from "@/services/session";
+import { ApiError } from '../types/api';
+import { sessionService } from '../services/session';
 
-const API_BASE_URL = (typeof process !== "undefined" && process.env.EXPO_PUBLIC_API_BASE_URL) || "http://10.0.2.2:3001";
+const API_BASE_URL =
+  (typeof process !== 'undefined' && process.env.EXPO_PUBLIC_API_BASE_URL) ||
+  'http://10.0.2.2:3001';
 
 type ApiErrorResponse = {
   message?: string;
@@ -15,21 +17,21 @@ type ApiErrorResponse = {
  */
 export async function apiRequest<T = unknown>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> {
   const headers = new Headers(options.headers as Record<string, string>);
 
   const isFormData =
-    typeof FormData !== "undefined" && options.body instanceof FormData;
+    typeof FormData !== 'undefined' && options.body instanceof FormData;
 
-  if (options.body && !isFormData && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+  if (options.body && !isFormData && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
 
   // Attach session cookie from AsyncStorage
   const cookieHeader = await sessionService.getCookieHeader();
   if (cookieHeader) {
-    headers.set("Cookie", cookieHeader);
+    headers.set('Cookie', cookieHeader);
   }
 
   let response: Response;
@@ -41,7 +43,7 @@ export async function apiRequest<T = unknown>(
     });
   } catch {
     throw new Error(
-      "Unable to connect to the server. Please check that the backend is running."
+      'Unable to connect to the server. Please check that the backend is running.',
     );
   }
 
@@ -58,8 +60,8 @@ export async function apiRequest<T = unknown>(
     throw new ApiError(
       errorData.message ||
         errorData.error ||
-        "Something went wrong. Please try again.",
-      response.status
+        'Something went wrong. Please try again.',
+      response.status,
     );
   }
 

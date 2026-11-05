@@ -33,6 +33,13 @@ if (!environmentResult.success) {
 }
 
 const env = environmentResult.data;
+
+// Mobile: split comma-separated FRONTEND_URL to allow Android emulator (10.0.2.2),
+// iOS simulator (localhost), and web (localhost).
+const frontendUrlList = env.FRONTEND_URL
+  .split(",")
+  .map((u) => u.trim())
+  .filter((u): u is string => u.length > 0);
 const app = express();
 
 app.disable("x-powered-by");
@@ -41,7 +48,16 @@ app.use(helmet());
 
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.) or matching origins
+      if (!origin) {
+        return callback(null, true);
+      }
+      if (frontendUrlList.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error("Not allowed by CORS"));
+    },
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
     credentials: true,

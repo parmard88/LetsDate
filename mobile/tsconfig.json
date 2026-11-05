@@ -1,9 +1,10 @@
 {
   "extends": "@react-native/typescript-config",
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
+    // Removed invalid 'ignoreDeprecations' option
     "baseUrl": ".",
     "types": ["node", "react", "react-native"],
+    "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*"]
     }

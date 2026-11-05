@@ -92,10 +92,6 @@ export function createSocketServer(
       methods: ["GET", "POST"],
       credentials: true,
     },
-    allowRequest: (request, callback) => {
-      const origin = request.headers.origin;
-      callback(null, origin === frontendUrl);
-    },
   });
 
   // Authenticate every socket using the existing database session.
@@ -168,8 +164,8 @@ export function createSocketServer(
 
           acknowledge?.({
             success: true,
-            message: "Joined conversation.",
-          });
+              message: "Joined conversation.",
+            });
         } catch {
           acknowledge?.({
             success: false,
@@ -283,15 +279,19 @@ export function createSocketServer(
             createdAt: message.createdAt,
           };
 
-          const { userOneId, userTwoId } = message.conversation.match;
-
           // Keep the existing open-chat broadcast.
           io.to(conversationRoom).emit("message:new", messagePayload);
 
           // Also notify both participants' private rooms.
           // This updates inboxes even when neither user has this chat open.
-          io.to(`user:${userOneId}`).emit("message:new", messagePayload);
-          io.to(`user:${userTwoId}`).emit("message:new", messagePayload);
+          io.to(`user:${message.conversation.match.userOneId}`).emit(
+            "message:new",
+            messagePayload
+          );
+          io.to(`user:${message.conversation.match.userTwoId}`).emit(
+            "message:new",
+            messagePayload
+          );
 
           acknowledge?.({
             success: true,
